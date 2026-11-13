@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 573" width="520" height="573" role="img" font-family='"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif'><title>初始化、訓練、晶片位置三層證據的強弱</title><desc>三條由上到下的色帶：初始化有直接證據，訓練只能推論，晶片的位置與取得方式沒有證據。</desc><rect width="520" height="573" fill="#f4f6f3"/><rect x="10" y="20" width="500" height="154.0" rx="12" fill="#e3f0ef" stroke="none" stroke-width="1"/>
+<rect x="26" y="36" width="132" height="40" rx="8" fill="#0f6b6b" stroke="none" stroke-width="1"/>
+<text x="40" y="65" font-size="26" text-anchor="start" fill="#ffffff" font-weight="700">直接證據</text>
+<text x="28" y="110" font-size="26" text-anchor="start" fill="#12252b" font-weight="700">初始化：權重在哪類晶片上產生</text>
+<text x="28" y="149" font-size="26" text-anchor="start" fill="#4b5e62" font-weight="400">指紋直接讀得出來</text>
+<rect x="10" y="190.0" width="500" height="154.0" rx="12" fill="#fbeede" stroke="none" stroke-width="1"/>
+<rect x="26" y="206.0" width="132" height="40" rx="8" fill="#b8651b" stroke="none" stroke-width="1"/>
+<text x="40" y="235" font-size="26" text-anchor="start" fill="#ffffff" font-weight="700">間接證據</text>
+<text x="28" y="280" font-size="26" text-anchor="start" fill="#12252b" font-weight="700">訓練：後續跑在哪些晶片上</text>
+<text x="28" y="319" font-size="26" text-anchor="start" fill="#4b5e62" font-weight="400">權重不能證明，只能推論</text>
+<rect x="10" y="360.0" width="500" height="193.0" rx="12" fill="#ececec" stroke="none" stroke-width="1"/>
+<rect x="26" y="376.0" width="132" height="40" rx="8" fill="#6b6b6b" stroke="none" stroke-width="1"/>
+<text x="40" y="405" font-size="26" text-anchor="start" fill="#ffffff" font-weight="700">沒有證據</text>
+<text x="28" y="450" font-size="26" text-anchor="start" fill="#12252b" font-weight="700">晶片的位置與取得方式</text>
+<text x="28" y="489" font-size="26" text-anchor="start" fill="#4b5e62" font-weight="400">租用、走私、合規</text>
+<text x="28" y="528" font-size="26" text-anchor="start" fill="#4b5e62" font-weight="400">都無從判斷</text></svg>

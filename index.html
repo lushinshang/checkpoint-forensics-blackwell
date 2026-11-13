@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>權重裡的晶片指紋：六個中國前沿模型的起點，對上受管制的 NVIDIA Blackwell</title>
+<meta name="description" content="獨立報告從公開權重還原初始化時的執行緒排列，指出 DeepSeek、月之暗面、MiniMax、螞蟻集團共六個模型的起點符合受管制的 NVIDIA Blackwell。">
+<meta name="theme-color" content="#f4f6f3">
+<meta property="og:title" content="權重裡的晶片指紋：六個中國前沿模型的起點，對上受管制的 NVIDIA Blackwell">
+<meta property="og:description" content="獨立報告從公開權重還原初始化時的執行緒排列，指出 DeepSeek、月之暗面、MiniMax、螞蟻集團共六個模型的起點符合受管制的 NVIDIA Blackwell。">
+<meta property="og:image" content="https://lushinshang.github.io/checkpoint-forensics-blackwell/images/cover-16x9.jpg">
+<meta property="og:url" content="https://lushinshang.github.io/checkpoint-forensics-blackwell/">
+<meta property="og:type" content="article">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23f4f6f3'/%3E%3Cg fill='%23c9d1cc'%3E%3Crect x='3' y='3' width='6' height='6'/%3E%3Crect x='13' y='3' width='6' height='6'/%3E%3Crect x='23' y='3' width='6' height='6'/%3E%3Crect x='3' y='13' width='6' height='6'/%3E%3Crect x='23' y='13' width='6' height='6'/%3E%3Crect x='3' y='23' width='6' height='6'/%3E%3Crect x='13' y='23' width='6' height='6'/%3E%3C/g%3E%3Crect x='13' y='13' width='6' height='6' fill='%23b8651b'/%3E%3Crect x='23' y='23' width='6' height='6' fill='%230f6b6b'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Noto+Sans+TC:wght@400;500;700;900&amp;family=Noto+Serif+TC:wght@400;600&amp;display=swap">
+<style>
+:root{--paper:#f4f6f3;--ink:#12252b;--muted:#4b5e62;--rule:#d5dcd8;--teal:#0f6b6b;--teal-soft:#dcebe8;--amber:#b8651b;--stone:#8a8173;
+--sans:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;--serif:"Noto Serif TC","Songti TC","PMingLiU",serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px;color-scheme:light}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--serif);font-size:17.5px;line-height:1.95;letter-spacing:0;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
+a{color:var(--teal);text-underline-offset:3px}
+:focus-visible{outline:3px solid var(--teal);outline-offset:3px;border-radius:2px}
+.skip{position:absolute;left:12px;top:-60px;background:var(--ink);color:#fff;padding:10px 14px;z-index:300;font-family:var(--sans)}
+.skip:focus{top:8px}
+.progress{position:fixed;inset:0 0 auto 0;height:3px;z-index:120;pointer-events:none}
+.progress i{display:block;height:100%;background:var(--teal);transform-origin:0 50%;transform:scaleX(0)}
+.bar{position:fixed;inset:3px 0 auto 0;height:52px;z-index:110;display:flex;align-items:center;gap:24px;padding:0 24px 0 max(24px,calc((100vw - 1240px)/2 + 24px));background:rgba(244,246,243,.9);backdrop-filter:blur(8px);border-bottom:1px solid transparent;transition:border-color .2s}
+.bar.on{border-bottom-color:var(--rule)}
+.bar .brand{font:900 15px/1 var(--sans);color:var(--ink);text-decoration:none;white-space:nowrap}
+.bar nav{display:flex;gap:20px;overflow-x:auto;scrollbar-width:none;white-space:nowrap}
+.bar nav a{font:500 14px/52px var(--sans);color:var(--muted);text-decoration:none;position:relative}
+.bar nav a[aria-current="true"]{color:var(--ink)}
+.bar nav a[aria-current="true"]::after{content:"";position:absolute;left:0;right:0;bottom:10px;height:2px;background:var(--teal)}
+.hero{position:relative;height:min(100svh,880px);min-height:600px;overflow:hidden;background:var(--paper)}
+.hero canvas{position:absolute;inset:0;display:block}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,var(--paper) 0,rgba(244,246,243,.94) 34%,rgba(244,246,243,0) 66%);pointer-events:none}
+.hero-text{position:absolute;z-index:2;left:max(24px,calc((100vw - 1240px)/2 + 24px));bottom:64px;max-width:min(41rem,calc(100vw - 48px));font-family:var(--sans)}
+h1{margin:0 0 22px;font-weight:900;letter-spacing:-.01em}
+h1 .t1{display:block;white-space:nowrap;font-size:clamp(2.5rem,6.2vw,4.9rem);line-height:1.08}
+h1 .t2 span{display:inline-block}
+h1 .t2{display:block;margin-top:14px;font-size:clamp(1.05rem,1.7vw,1.35rem);line-height:1.55;font-weight:500;color:var(--muted);text-wrap:balance}
+.hero .seed{text-wrap:pretty;margin:0 0 20px;font-size:16px;line-height:1.7;color:var(--ink)}
+.hero .seed b{font:500 15px var(--mono);background:var(--teal-soft);padding:1px 6px;border-radius:3px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.chips button{font:700 14px/1.2 var(--sans);color:var(--ink);background:transparent;border:1.5px solid var(--ink);border-radius:999px;padding:9px 14px;cursor:pointer;transition:background .15s,color .15s}
+.chips button small{font:500 13px var(--mono);margin-left:6px;opacity:.75}
+.chips button[aria-checked="true"]{background:var(--ink);color:var(--paper)}
+.chips button:hover{background:var(--teal-soft)}
+.chips button[aria-checked="true"]:hover{background:var(--ink)}
+.hero-cap{text-wrap:pretty;margin:0;font-size:14px;line-height:1.7;color:var(--muted);max-width:32em}
+.hero-cap .fine{display:block;margin-top:4px;font-size:13px}
+main{padding-bottom:40px}
+.intro{max-width:680px;margin:56px auto 0;padding:0 24px;font:500 15px/1.8 var(--sans);color:var(--muted)}
+.intro span{display:block;border-left:3px solid var(--teal);padding-left:14px}
+.sec{max-width:1240px;margin:0 auto;padding:88px 24px 0}
+.sec h2{margin:0 0 28px;font:900 clamp(1.55rem,2.4vw,1.95rem)/1.3 var(--sans);letter-spacing:-.005em;text-wrap:balance}
+.sec-body{max-width:680px}
+p{margin:0 0 1.15em}
+strong{font-weight:600}
+ul{padding-left:1.2em;margin:0 0 1.15em}
+li{margin-bottom:.5em;overflow-wrap:anywhere}
+@media (min-width:1100px){
+  .intro{max-width:1240px;display:grid;grid-template-columns:260px 680px;column-gap:64px;justify-content:center}
+  .intro span{grid-column:2}
+  .sec{display:grid;grid-template-columns:260px 680px;column-gap:64px;justify-content:center;padding-top:104px}
+  .sec>h2{position:sticky;top:96px;align-self:start;grid-column:1;grid-row:1;margin:6px 0 0}
+  .sec>.sec-body{grid-column:2;grid-row:1}
+  .wide{margin-right:calc(-1 * min(180px,(100vw - 1004px)/2 - 20px))}
+}
+figure{margin:2.2em 0}
+figure.fig img{display:block;width:100%;height:auto;cursor:zoom-in}
+figure.concept img{aspect-ratio:16/9;object-fit:cover;border-radius:2px}
+figure.num{counter-increment:fig}
+figcaption{font:400 14px/1.65 var(--sans);color:var(--muted);margin-top:10px;max-width:680px}
+figure.num figcaption::before{content:"圖 " counter(fig) "　";font-weight:700;color:var(--ink)}
+.table-wrap{margin:2em 0;overflow-x:auto;border-top:2px solid var(--ink);border-bottom:1px solid var(--ink)}
+table{border-collapse:collapse;width:100%;font:400 15px/1.55 var(--sans)}
+th{font:700 13px/1.4 var(--sans);color:var(--muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--rule);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.bw{box-shadow:inset 3px 0 var(--teal)}
+td.hp{box-shadow:inset 3px 0 var(--stone)}
+td strong{font-weight:700}
+.note{margin:2.6em 0 1.6em;padding:6px 0 0 22px;border-left:3px solid var(--amber)}
+.note-t{font:700 15px/1.5 var(--sans);margin:0 0 .6em;color:var(--ink)}
+.note p,.note li{font-size:16px;line-height:1.85}
+.play{margin:2.4em 0;padding:20px 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);font-family:var(--sans)}
+.play figcaption{margin:0 0 14px;max-width:none;font-size:15px;color:var(--ink)}
+.play-ui{display:flex;align-items:center;gap:14px;margin-bottom:14px;font:700 15px var(--sans)}
+.play-ui input{flex:1;max-width:320px;accent-color:var(--teal)}
+.play-ui output{font:500 18px var(--mono);min-width:2ch}
+.g10{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;max-width:360px}
+.g10 i{aspect-ratio:1;background:#e1e8e5;border-radius:2px;position:relative;font:500 11px/1 var(--mono);color:transparent;display:grid;place-items:center}
+.g10 i.base{box-shadow:inset 0 0 0 2px var(--stone);border-radius:50%}
+.g10 i.cur{background:#9c5010;color:#fff}
+.g10 i.cur.base{box-shadow:inset 0 0 0 2px var(--teal)}
+.play-out{margin:14px 0 0;font:400 15px/1.7 var(--sans);max-width:36em}
+footer{max-width:680px;margin:72px auto 0;padding:24px 24px 64px;border-top:1px solid var(--rule);font:400 14px/1.7 var(--sans);color:var(--muted)}
+.lightbox{display:none;position:fixed;inset:0;z-index:200;background:rgba(18,37,43,.9);align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+.lightbox.is-open{display:flex}
+.lightbox img{max-width:96vw;max-height:92vh;width:auto;height:auto;border-radius:6px;background:var(--paper)}
+.lightbox .lightbox-hint{position:absolute;top:20px;right:24px;color:rgba(255,255,255,.8);font:14px var(--sans)}
+@media (max-width:640px){
+  body{font-size:16.5px}
+  .bar{padding:0 16px;gap:16px}
+  .intro{display:block}
+  .bar .brand{display:none}
+  .hero{min-height:640px}
+  .hero::after{background:linear-gradient(0deg,var(--paper) 0,rgba(244,246,243,.95) 48%,rgba(244,246,243,0) 78%)}
+  .hero-text{left:20px;right:20px;bottom:36px}
+  .sec{padding:72px 20px 0}
+  .intro{padding:0 20px}
+  figure.concept img{aspect-ratio:9/16;max-height:78vh}
+  th,td{padding:8px 8px;font-size:14px}
+  th{white-space:normal}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.bar,.chips button{transition:none}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">跳到內文</a>
+<div class="progress" aria-hidden="true"><i></i></div>
+<header class="bar"><a class="brand" href="#top">權重裡的晶片指紋</a><nav aria-label="章節"><a href="#s1">兩台機器</a><a href="#s2">過去的指控</a><a href="#s3">亂數與晶片</a><a href="#s4">殘留痕跡</a><a href="#s5">換機時間</a><a href="#s6">證據邊界</a><a href="#s7">規模估計</a><a href="#s8">權重會說話</a><a href="#s9">來源</a><a href="#s10">製作說明</a></nav></header>
+<section class="hero" id="top" aria-label="頁首">
+<canvas id="grid" aria-hidden="true"></canvas>
+<div class="hero-text">
+<h1><span class="t1">權重裡的晶片指紋</span><span class="t2"><span>六個中國前沿模型的起點，</span> <span>對上受管制的 NVIDIA Blackwell</span> </span></h1>
+<p class="seed">同一個種子 <b>953049583</b>，換一種晶片，填出的位置就不一樣。選一種晶片看看：</p>
+<div class="chips" role="radiogroup" aria-label="選擇晶片">
+<button type="button" role="radio" aria-checked="true">Hopper<small>132</small></button>
+<button type="button" role="radio" aria-checked="false" tabindex="-1">B200／B300<small>148</small></button>
+<button type="button" role="radio" aria-checked="false" tabindex="-1">GB200／GB300<small>152</small></button>
+</div>
+<p class="hero-cap" id="hero-cap" aria-live="polite"><span id="cap-main">示意：一列 148 格，每隔 132 格出現一次，比一列少 16 格，所以每往下一列就往左偏 16 格。</span><span class="fine">真實的間隔是 SM 數 × 2,048，這裡直接用 SM 數縮小呈現。</span></p>
+</div>
+</section>
+<main id="main">
+<p class="intro"><span>導讀對象：Will DePue，〈Top Chinese Frontier AI Models Carry the Fingerprint of Export-Controlled NVIDIA Blackwell GPUs〉，Unemployment Labs，2026 年 11 月 12 日（同日修訂）。這是單一作者的獨立報告，重現用的程式碼與資料已公開。</span></p>
+<section class="sec" id="s1" aria-labelledby="h1"><h2 id="h1">一個數字，兩台機器</h2><div class="sec-body"><p>953049583。報告說，這是 DeepSeek 初始化模型時用的亂數種子，而且 DeepSeek-V3 和 DeepSeek-V4-Flash 兩代模型用的是同一個。</p><p>作者把這個種子餵給沒改過的 PyTorch，分別在兩台機器上跑。在上一代的 NVIDIA H100 上，程式吐出的數字和 DeepSeek-V3 權重裡保存下來的 57,344 個初始值逐位元相同，卻對不上 V4-Flash 的任何一列。換到新一代的 Blackwell B300，結果反過來：V4-Flash 被挑出來比對的 469 列裡有 461 列相關係數超過 0.99，其中 445 列整列逐位元相同，剩下 8 列被訓練改掉了一部分；V3 則一列都對不上。把種子改動 1，兩台機器都對不出任何一列。</p><p>同一家公司、同一個種子，兩代模型卻各自只認一種晶片。V3 在 2024 年 12 月發布，V4 在 2026 年 4 月發布，中間那段時間，DeepSeek 初始化模型用的硬體換了。換上的那一種，出口到中國需要美國政府許可，報告說目前沒有任何核發許可的公開紀錄。</p><figure class="wide fig concept"><picture><source media="(max-width: 640px)" srcset="images/cover-9x16.jpg" width="941" height="1672"><img src="images/cover-16x9.jpg" width="1672" height="941" alt="放大鏡下，由小方格組成的矩陣浮現指紋紋路，背景是晶片輪廓" loading="lazy" decoding="async"></picture><figcaption>概念示意，非實景。</figcaption></figure></div></section>
+<section class="sec" id="s2" aria-labelledby="h2"><h2 id="h2">過去只有指控</h2><div class="sec-body"><p>中國 AI 公司用上 Blackwell 的說法早就有了。2025 年 12 月 The Information 報導 DeepSeek 使用了被禁的 NVIDIA 晶片；2026 年 2 月路透引述一位美國政府高層官員，說 DeepSeek 即將發布的模型是用 Blackwell 訓練的；7 月白宮科技政策辦公室主任 Michael Kratsios 點名月之暗面（Moonshot AI）在做 Kimi K3 時取用了被禁的晶片。</p><p>這些說法有個共同點：外界沒辦法檢查。晶片在哪個機房、誰租的、跑了什麼，都在公司內部。官員說有，公司不回應，旁觀者只能選擇相信哪一邊。</p><p>這份報告換了一個取證的位置。它完全不碰內部消息，證據只來自這些公司自己放上 Hugging Face 的模型權重。公司為了開源而公開的檔案，本身就帶著製造它的硬體留下的痕跡。</p><figure class="wide fig concept"><picture><source media="(max-width: 640px)" srcset="images/concept-closed-9x16.jpg" width="941" height="1672"><img src="images/concept-closed-16x9.jpg" width="1672" height="941" alt="一個鎖住的金屬保險庫，旁邊是一座可以從外面看進去的玻璃櫃" loading="lazy" decoding="async"></picture><figcaption>概念示意，非實景。</figcaption></figure></div></section>
+<section class="sec" id="s3" aria-labelledby="h3"><h2 id="h3">亂數怎麼會認得晶片</h2><div class="sec-body"><p>模型的權重是幾十億個可調整的數字。訓練是不斷修改這些數字的過程，但在訓練開始前，它們得先有初始值。PyTorch 用一種叫 Philox 的偽亂數演算法來產生這些初始值：給它一個種子，它就吐出一串看起來隨機、實際上完全固定的數字。同樣的種子永遠得到同一串，工程師才能從同一個起點重跑實驗。</p><p>關鍵在「誰來填」。為了快，PyTorch 透過 NVIDIA 的亂數函式庫 cuRAND，把填數字的工作分給 GPU 上大量平行的執行緒。每個執行緒從種子算出自己的一串數字，負責填固定間隔的位置。執行緒有幾個，取決於晶片有幾個處理單元（NVIDIA 稱為 streaming multiprocessor，簡稱 SM）：初始化的量夠大時，每個 SM 會用滿 2,048 個執行緒。</p><p>報告用一個縮小版的例子說明。假設一顆 GPU 有 6 個 SM、每個 SM 有 8 個執行緒，總共 48 個。把權重想成一長排空格，第 1 個執行緒填第 1 格，第 2 個填第 2 格，一路到第 48 格；接著第 1 個執行緒的下一個數字落在第 49 格，再下一個落在第 97 格。也就是說，每個執行緒每隔 48 格填一次。</p><p>現在種子不變，把 GPU 換成 5 個 SM 的，執行緒變成 40 個。第 1 個執行緒算出的數字一模一樣，落點卻變成第 1、41、81 格。數字都對，位置全亂；在這個例子裡，整張表只剩 6% 的格子和原本相同。</p><figure class="wide fig num"><picture><source media="(max-width: 640px)" srcset="images/thread-layout-mobile.svg" width="600" height="1608"><img src="images/thread-layout.svg" width="860" height="577" alt="執行緒數不同，同一串數字落在不同位置" loading="lazy" decoding="async"></picture><figcaption>本文依原報告的縮小版例子重繪。</figcaption></figure><figure class="wide play" id="play">
+<figcaption><strong>換個 SM 數試試看</strong>　每個 SM 有 8 個執行緒。下面 100 格由 thread 0 每隔「執行緒總數」格填一次；灰色圓框是 6 個 SM（48 個執行緒）時的落點。</figcaption>
+<div class="play-ui"><label for="sm">SM 數</label><input id="sm" type="range" min="3" max="12" value="5" aria-describedby="play-out"><output id="smv" for="sm">5</output></div>
+<div class="g10" id="g10" aria-hidden="true"></div>
+<p id="play-out" class="play-out" aria-live="polite"></p>
+</figure><p>所以要重現一份權重，得同時猜對兩件事：種子決定「是哪些數字」，執行緒數決定「放在哪裡」。種子對、執行緒數錯，得到的是對的數字放錯位置；執行緒數對、種子錯，連數字都不一樣。</p><p>真實晶片的數字大得多，規則相同：</p><div class="wide table-wrap" tabindex="0"><table><thead><tr><th>晶片世代</th><th>型號</th><th>SM 數</th><th>初始化用的執行緒數</th></tr></thead><tbody><tr><td class="hp">Hopper</td><td>H100 SXM、H200、H800</td><td>132</td><td>270,336</td></tr><tr><td>Blackwell</td><td>B200、B300</td><td>148</td><td>303,104</td></tr><tr><td>Blackwell（Grace 搭配）</td><td>GB200、GB300</td><td>152</td><td>311,296</td></tr></tbody></table></div><p>還原出執行緒數，就知道權重的初始排列符合哪一組硬體。它分不出同組裡的型號：讀到 132，可能是 H800，也可能是 H100 或 H200。H800 在 2023 年 10 月以前還能合法出口到中國，H100 則從 2022 年 10 月起就受管制；DeepSeek-V3 是 2024 年 12 月才發布的，單看發布日期，推不出那批晶片是什麼時候、從哪裡來的。</p><figure class="wide fig num"><picture><source media="(max-width: 640px)" srcset="images/sm-counts-mobile.svg" width="520" height="541"><img src="images/sm-counts.svg" width="860" height="416" alt="三組晶片的 SM 數與初始化執行緒數" loading="lazy" decoding="async"></picture><figcaption>本文依原報告的數字整理；橫條長度依執行緒數成比例，從 0 起算。</figcaption></figure></div></section>
+<section class="sec" id="s4" aria-labelledby="h4"><h2 id="h4">訓練過後還剩下什麼</h2><div class="sec-body"><p>權重公開時已經訓練完了，初始值照理說早被改得面目全非。報告靠兩種殘留把它找回來。</p><p>第一種是根本沒被動過的權重。模型的詞表裡常有一些保留給特殊符號、訓練資料中從沒出現過的位置，對應的那幾列權重從頭到尾沒被更新，初始值幾乎原封不動。這些列可以直接和候選的種子、執行緒數算出來的數字逐一比對，對上就是對上。開頭那個兩台機器的實驗，比的就是這種列。</p><p>第二種比較隱微。訓練過的權重等於初始值加上訓練期間所有的調整量；只要調整沒有完全蓋過起點的差異，起點高的權重最後還是略微偏高。單看一個權重看不出來，累積幾十萬個就測得到。報告在 DeepSeek-V4-Flash 的 42 層、每層 745,472 個權重上做了這個檢驗：用 Blackwell 的排列去對，初始值和最終值的相關係數是 0.066，換成 Hopper 的排列，相關就消失了。0.066 很小，但樣本數夠大，換算下來是 57 個標準差。作者特別註明，這是在這批權重上觀察到的現象，不保證每一次訓練都會留下。</p><p>找法是用一部分權重去搜尋最吻合的種子與執行緒數，再拿這組答案去預測另一批沒參與搜尋的權重，中途不准調整。在沒看過的資料上還對得上，才算數。</p><figure class="wide fig num"><picture><source media="(max-width: 640px)" srcset="images/evidence-flow-mobile.svg" width="520" height="810"><img src="images/evidence-flow.svg" width="860" height="588" alt="從公開權重還原晶片排列的流程" loading="lazy" decoding="async"></picture><figcaption>本文依原報告的方法描述整理。</figcaption></figure><p>搜尋空間大約是 6 兆組種子與排列的組合，試這麼多次，總會有湊巧看起來像的。作者估計，純靠運氣在整個搜尋裡能湊出的最強吻合大約是 8 個標準差，並以此當門檻。六個模型各自最強的證據落在 49 到 1,385 個標準差之間，報告裡最弱的單項檢驗也有 20。</p><p>方法本身也對過答案。有 24 個模型的開發者公開講過用了什麼硬體，報告的判讀和這 24 個全部一致：Meta 的 Llama 3.1 讀出 132（H100），EleutherAI 的 Pythia 系列讀出 108（A100），NVIDIA 自己的 Nemotron-3 Ultra 技術報告寫明某階段用 GB200，讀出來是 152，和 Kimi K3 相同。作者自己替這個數字降了溫：其中 11 個是還沒開始訓練的第零步檢查點，同系列模型之間也不獨立，所以這只能算一致性檢查，不能當成準確率。</p></div></section>
+<section class="sec" id="s5" aria-labelledby="h5"><h2 id="h5">四家公司換機的時間點</h2><div class="sec-body"><div class="wide table-wrap" tabindex="0"><table><thead><tr><th>公司</th><th>模型</th><th>發布</th><th>初始化排列對應的晶片</th></tr></thead><tbody><tr><td>DeepSeek</td><td>DeepSeek-V3</td><td>2024 年 12 月</td><td class="hp">Hopper（公司自述 H800）</td></tr><tr><td></td><td>DeepSeek-V4-Flash</td><td>2026 年 4 月</td><td class="bw"><strong>Blackwell B200／B300</strong></td></tr><tr><td></td><td>DeepSeek-V4-Pro</td><td>2026 年 4 月</td><td class="bw"><strong>Blackwell GB200／GB300</strong></td></tr><tr><td>月之暗面</td><td>Kimi K2</td><td>2025 年 7 月</td><td class="hp">Hopper（公司自述 H800）</td></tr><tr><td></td><td>Kimi K2.5</td><td>2026 年 1 月</td><td class="hp">Hopper（公司自述 H800）</td></tr><tr><td></td><td>Kimi K3</td><td>2026 年 7 月</td><td class="bw"><strong>Blackwell GB200／GB300</strong></td></tr><tr><td></td><td>Kimi K3.1-Pro</td><td>2026 年 11 月</td><td class="bw"><strong>Blackwell GB200／GB300</strong></td></tr><tr><td>MiniMax</td><td>MiniMax-M2.7</td><td>2026 年 4 月</td><td class="hp">Hopper</td></tr><tr><td></td><td>MiniMax-M3</td><td>2026 年 6 月</td><td class="bw"><strong>Blackwell B200／B300</strong></td></tr><tr><td>螞蟻集團</td><td>Ling-3.0-flash</td><td>2026 年 8 月</td><td class="hp">Hopper</td></tr><tr><td></td><td>Ling-3.1-flash</td><td>2026 年 10 月</td><td class="bw"><strong>Blackwell GB200／GB300</strong></td></tr></tbody></table></div><p>粗體的四種型號出口到中國都需要美國許可，報告說沒有任何核發紀錄。</p><p>四家公司的轉換都發生在 2026 年內，而且是斷代式的：前一個模型還是 Hopper，下一個就是 Blackwell。Kimi K3.1-Pro 和 K3 的種子相同，作者認為它可能是 K3 的檢查點再做後續訓練，所以六個模型實際對應五次訓練。</p><p>月之暗面有一個落在中間的模型。Kimi K2.7-Code 比 K3 早六週發布，它保留的 254 列權重是兩個來源的混合：約八成是從 K2.5 繼承來的 Hopper 排列，約兩成是一批符合 148 個 SM 的新數字。每一列的混合比例都相同，作者判斷這是兩個檢查點合併的結果，沒有把它算進六個 Blackwell 模型。</p><p>沒換的也不少。阿里巴巴的 Qwen、智譜的 GLM、騰訊、小米、階躍星辰，報告能讀出結果的最新模型都還是 Hopper。美團說 LongCat-2.0 完全在「AI ASIC superpods」上訓練，權重裡也找不到 NVIDIA 的排列；作者從一份後來被刪除的設定檔推測那是華為昇騰 910。</p><figure class="wide fig num"><picture><source media="(max-width: 640px)" srcset="images/timeline-mobile.svg" width="520" height="902"><img src="images/timeline.svg" width="860" height="540" alt="四家公司各模型的發布時間與對應的晶片世代" loading="lazy" decoding="async"></picture><figcaption>本文依原報告表 1 整理；手機版依發布先後排列，不按時間比例。</figcaption></figure></div></section>
+<section class="sec" id="s6" aria-labelledby="h6"><h2 id="h6">這份證據到哪裡為止</h2><div class="sec-body"><p>報告花了相當的篇幅劃界，這部分比結論更值得細讀。</p><figure class="wide fig num"><picture><source media="(max-width: 640px)" srcset="images/evidence-layers-mobile.svg" width="520" height="573"><img src="images/evidence-layers.svg" width="860" height="422" alt="初始化、訓練、晶片位置三層證據的強弱" loading="lazy" decoding="async"></picture><figcaption>本文歸納。</figcaption></figure><p><strong>它認的是起點。</strong> 指紋說明初始權重是在哪一類硬體上產生的。如果一次訓練在同一批 GPU 上建立權重並訓練到底，指紋就同時指向兩者；但一家公司也可以在甲機器上初始化、搬到乙機器上訓練，或拿既有模型到新硬體上接著練，單憑權重排除不了。反過來也一樣，讀到 Hopper 不代表後面沒用 Blackwell。報告的用詞是：指紋「支持、但不能證明」Blackwell 也負責了訓練。有一個細節讓這個推論稍微站得穩一點：Kimi K3 裡至少有 64 個各自帶種子的程序，全都留下同樣的 152 個 SM 的排列。</p><p><strong>它不知道晶片在哪裡、是誰的。</strong> Blackwell 可以向中國境外的資料中心租用。報告明說，這些發現是「取得先進運算硬體」的技術證據，不能單獨用來認定晶片被走私進中國，也不能認定有人違反出口管制。</p><p>前面那兩則指控，說的位置其實不同。路透那則裡，匿名官員說 DeepSeek 的 Blackwell 很可能集中在內蒙古的資料中心，卻不肯說消息怎麼來、晶片怎麼取得。Kratsios 的社群貼文則說，月之暗面取得了配備 GB300 的伺服器，也曾在泰國取用 GB300，可能用來訓練模型。一個指向晶片在中國境內，一個指向境外；權重指紋讀出來的，兩種情況下是同一個數字。</p><p><strong>有另一種晶片能做出相同的排列。</strong> 舊款 NVIDIA 晶片做不到，因為軟體可以少用幾個處理單元，卻沒辦法憑空多出來；中國特供版的 Blackwell 顯示卡每個 SM 的執行緒數不同，也湊不出這兩個總數。AMD 的 MI300X 是例外：它平常用 304 個處理單元，但可以切成兩組 152，或設定成只用 148，而且它的亂數軟體能產生和 NVIDIA 相同的底層序列。作者在實體 MI300X 上確認過，這樣設定真的能重現那兩種排列。</p><p>為了分辨，作者找到兩家廠商在產生數字的某一步計算上有細微差異。在 DeepSeek-V4-Flash 保存下來的權重裡，兩家結果不同的值有 377 個，其中 363 個符合 NVIDIA，符合 AMD 的是 0 個。所以結論裡只有 V4-Flash 被稱為「確鑿」。另外五個模型這項檢驗做不出結果，作者的判斷是「非常不可能」：MI300X 預設狀態下產生不了這兩種排列，得有人把整個叢集刻意設定成和 Blackwell 相同的單元數。何況 MI300X 本身也在管制清單上，就算真是它，問題的性質沒變。</p><p><strong>很多模型它讀不了。</strong> 沒公開權重的模型不能查。百度的 PaddlePaddle 框架產生亂數的方式不帶晶片排列，作者還原出了 ERNIE-5.5 的種子（2760），卻判斷不了硬體。在 CPU 上初始化的模型不留 GPU 痕跡，阿里巴巴有幾個 Qwen3 模型就是這樣。DeepSeek-V4.1-Flash 窮舉搜尋後一無所獲。報告強調，讀不出結果對硬體沒有任何說明力。</p><p>旁證方面，作者列了兩條公開紀錄：螞蟻集團的 cuLA 程式庫裡有一份 2026 年 3 月 31 日在 GB300 上跑出來的效能測試結果；而 2025 年 6 月，一位 DeepSeek 工程師在 GitHub 上寫過「我們沒有 SM100 的 GPU」，SM100 指的就是 Blackwell。</p></div></section>
+<section class="sec" id="s7" aria-labelledby="h7"><h2 id="h7">多少顆、多少錢</h2><div class="sec-body"><p>如果這些模型確實是在初始化它的硬體上訓練完的，規模有多大？報告從模型大小和訓練資料量反推：</p><div class="wide table-wrap" tabindex="0"><table><thead><tr><th>模型</th><th>折合 H100</th><th>Blackwell 顆數（最佳估計）</th><th>估計範圍</th><th>估計訓練天數</th></tr></thead><tbody><tr><td>DeepSeek-V4-Flash</td><td>3,500</td><td>1,500</td><td>250–5,000</td><td>50</td></tr><tr><td>DeepSeek-V4-Pro</td><td>7,500</td><td>3,000</td><td>750–6,500</td><td>70</td></tr><tr><td>Kimi K3</td><td>11,500</td><td>4,500</td><td>1,000–9,500</td><td>70</td></tr><tr><td>MiniMax-M3</td><td>3,500</td><td>1,500</td><td>200–7,000</td><td>60</td></tr><tr><td>Ling-3.1-flash</td><td>4,000</td><td>1,500</td><td>400–6,500</td><td>100</td></tr><tr><td>五次訓練合計</td><td>30,000</td><td>12,000</td><td>7,000–22,000</td><td></td></tr></tbody></table></div><p>單價取每顆約 7 萬美元，依據是《華爾街日報》報導馬來西亞為字節跳動安裝約 36,000 顆 Blackwell、造價超過 25 億美元。照這個價格，最大的一座叢集約 2 到 3 億美元，五座合計超過 5 億美元。這只算最後一次正式訓練，實驗、失敗的嘗試和推論服務都不在內；作者推測這些公司花在受管制 GPU 上的總額可能以十億美元計。</p><p>這一段是整份報告最鬆的地方，作者自己寫了「我們對這些估計沒有把握」。GPU 的實際使用效率沒有任何一家公布，訓練用了多少 token 除 DeepSeek 外都是作者用尚未發表的方法估的，訓練天數是從發布時程猜的，而天數砍半，顆數就加倍。同樣在 Grace Blackwell 上，Mistral 說它用 3,800 顆訓練了和 DeepSeek-V4-Pro 同樣活躍參數量的 Mistral Large 4；Microsoft 說它用 16,000 顆、38 天訓練了規模相近的 MAI-Base-2。照後者的節奏，最大的兩次訓練各需要 8,000 到 9,000 顆。報告當天修訂過一次：初版假設 GPU 跑得和 NVIDIA 官方效能測試一樣有效率，把最大的訓練估成 2,000 到 3,000 顆，之後依已公開的訓練紀錄往上調。</p><p>表中各欄的範圍差到十倍以上，讀的時候把它當數量級就好：是「幾千顆」，而非「幾十顆」或「幾十萬顆」。</p><figure class="wide fig num"><picture><source media="(max-width: 640px)" srcset="images/gpu-ranges-mobile.svg" width="520" height="805"><img src="images/gpu-ranges.svg" width="860" height="429" alt="五個模型的 Blackwell GPU 顆數估計範圍與最佳估計，另以短橘線標出 Mistral Large 4 的 3,800 顆" loading="lazy" decoding="async"></picture><figcaption>本文依原報告表 2 整理；範圍很寬，請當數量級讀。</figcaption></figure></div></section>
+<section class="sec" id="s8" aria-labelledby="h8"><h2 id="h8">公開的權重會說話</h2><div class="sec-body"><p>把報告的結論壓到最保守的版本：六個模型的初始權重，排列方式符合受管制的 Blackwell；其中 DeepSeek-V4-Flash 排除了已知的唯一替代解釋，並在實體晶片上重現。至於晶片在哪、怎麼取得、有沒有違法，報告沒有回答，也明說沒有回答。</p><p>即使只到這裡，它改變的東西已經不少。出口管制的討論過去靠的是匿名官員和調查報導，現在多了一類任何人都能重跑的證據：程式碼和保存下來的權重列都放在 GitHub，作者說在筆電上幾秒鐘就能驗完，不需要 GPU。「用的是哪一款晶片」這件事，從「你信不信這位官員」變成「你要不要自己跑一次」；至於晶片在哪裡、怎麼取得，仍然只有官員的說法。</p><p>另一層意思是對開源模型的。發布權重的時候，沒被訓練到的那幾列保留字元，會把種子和機房裡的晶片型號一起帶出門。DeepSeek 跨世代沿用同一個種子，月之暗面用同一條規則推導種子，這些工程上圖方便的習慣，讓外人能一代一代追下去。</p><p>以下是本文的推論，報告沒有這樣寫：這個方法的有效期可能不長。報告自己列出的盲區就是現成的迴避手冊，在 CPU 上初始化、換一個不帶排列特徵的亂數產生方式，或在發布前把沒訓練到的列重新填過，指紋就不見了。阿里巴巴的幾個 Qwen3 模型已經因為在 CPU 上初始化而讀不出任何東西。已經發布的權重收不回去，往後的模型卻未必還會留下同樣的線索；這份報告抓到的，也許是一段不會太長的空檔。</p><div class="note" role="note"><p class="note-t">補述（依官方文件整理，報告沒有談）</p><p>報告沒談、但讀到這裡很自然會問：認得出型號之後，現行規則管得到什麼？以下依官方文件補一段對照。</p><ul><li>美國出口管理條例（EAR）對「出口」的定義，是把物品實際運出或傳送出美國，另含在美國境內把技術或原始碼交給外國人（視同出口）；條文沒有出現遠端存取或雲端的字眼（15 CFR 734.13）。</li><li>2026 年 1 月 15 日，BIS 把 H200、MI325X 這一級晶片對中國的審查改成逐案。申請人要提供在中國等八個國家（或最終母公司總部在這些國家）的 IaaS 遠端使用者名單，並證明最終收貨人有嚴格的客戶盤查程序。公告全文沒有出現 Blackwell。</li><li>5 月 31 日的指引重申一項 2023 年就有的要求：把先進運算品項賣給總部在 D:5 國家（含中國）或澳門、或最終母公司在那裡的實體，不論它人在哪裡都要許可證。指引全文沒有 Blackwell，也沒有遠端存取。</li><li>眾議院 1 月 12 日以 369 比 22 通過《遠端存取安全法》（Remote Access Security Act），授權 BIS 把出口管制套用到經網路或雲端的遠端取用。法案送到參議院銀行委員會後，目前查到的公開紀錄沒有聽證或表決。</li></ul><p>本文沒有查到針對海外雲端業者出租 Blackwell 的專門規則。台灣《新電子科技雜誌》11 月 13 日的一篇分析預測，下一步會是要求海外雲端業者核對、申報中國客戶；那是該文作者的預測，不是官方動作。</p></div><p>這些公司是怎麼用到這些晶片的，報告留白，這篇導讀也沒有答案。</p><figure class="wide fig concept"><picture><source media="(max-width: 640px)" srcset="images/concept-shelf-9x16.jpg" width="941" height="1672"><img src="images/concept-shelf-16x9.jpg" width="1672" height="941" alt="一排玻璃罐，每個罐中有晶片輪廓與馬賽克指紋，其中一罐泛著橘光" loading="lazy" decoding="async"></picture><figcaption>概念示意，非實景。</figcaption></figure></div></section>
+<section class="sec" id="s9" aria-labelledby="h9"><h2 id="h9">來源</h2><div class="sec-body"><ul><li>原報告：Will DePue，<a href="https://unemploymentlabs.com/checkpoint-forensics" target="_blank" rel="noopener">Top Chinese Frontier AI Models Carry the Fingerprint of Export-Controlled NVIDIA Blackwell GPUs</a>，Unemployment Labs，2026-11-12</li><li>重現用程式碼與資料：<a href="https://github.com/macrogrants/checkpoint-forensics" target="_blank" rel="noopener">macrogrants/checkpoint-forensics</a></li><li>路透（轉載），2026-02-23：<a href="https://whbl.com/2026/02/23/exclusive-chinas-deepseek-trained-ai-model-on-nvidias-best-chip-despite-us-ban-official-says/" target="_blank" rel="noopener">China's DeepSeek trained AI model on Nvidia's best chip despite US ban, official says</a></li><li>Bloomberg，2026-07-22：<a href="https://news.bgov.com/artificial-intelligence/white-house-official-says-moonshot-accessed-banned-nvidia-chips" target="_blank" rel="noopener">US Official Says Moonshot Accessed Banned Nvidia Chips</a></li><li>Bloomberg 轉述 The Information，2025-12-10：<a href="https://news.bgov.com/tech-and-telecom-law/deepseek-has-used-banned-nvidia-chips-the-information-says-2" target="_blank" rel="noopener">DeepSeek Has Used Banned Nvidia Chips, The Information Says</a></li><li>螞蟻集團 cuLA：<a href="https://github.com/inclusionAI/cuLA/blob/main/BENCHMARK_GB300.md" target="_blank" rel="noopener">BENCHMARK_GB300.md</a></li><li>DeepSeek DeepGEMM：<a href="https://github.com/deepseek-ai/DeepGEMM/pull/112" target="_blank" rel="noopener">Pull Request #112</a></li><li>美國出口管理條例對「出口」的定義：<a href="https://www.law.cornell.edu/cfr/text/15/734.13" target="_blank" rel="noopener">15 CFR 734.13</a></li><li>BIS 逐案審查規則，2026-01-15：<a href="https://www.govinfo.gov/content/pkg/FR-2026-01-15/html/2026-00789.htm" target="_blank" rel="noopener">Federal Register 2026-00789</a></li><li>BIS 指引，2026-05-31：<a href="https://www.bis.gov/media/documents/bis-guidance-may-31-2026.pdf" target="_blank" rel="noopener">Guidance Regarding Enforcement of License Requirements for Advanced Computing Items</a></li><li>眾議院《遠端存取安全法》（H.R. 2683）法案文字：<a href="https://www.govinfo.gov/content/pkg/BILLS-119hr2683rfs/html/BILLS-119hr2683rfs.htm" target="_blank" rel="noopener">govinfo</a></li><li>新電子科技雜誌，2026-11-13，對該報告的分析貼文：<a href="https://www.facebook.com/share/p/18YJwLWBLB/" target="_blank" rel="noopener">Facebook</a></li><li>PyTorch 決定執行緒排列的程式碼：<a href="https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/native/cuda/DistributionTemplates.h" target="_blank" rel="noopener">DistributionTemplates.h</a></li></ul></div></section>
+<section class="sec" id="s10" aria-labelledby="h10"><h2 id="h10">製作說明</h2><div class="sec-body"><p>本文由 AI（Claude）閱讀原報告後撰寫，未經人工逐句審稿。文中的數字與判斷出自原報告；「這份證據到哪裡為止」與結尾兩處另依新聞報導和美國官方文件補述，來源列在文末。標明「本文的推論」的段落除外；原報告的實驗沒有另行重跑。</p></div></section>
+</main>
+<footer>深度導讀。原報告發布於 2026 年 11 月 12 日，本文整理於 2026 年 11 月 14 日。</footer>
+<div class="lightbox" id="lightbox"><span class="lightbox-hint">點擊或按 Esc 關閉</span><img src="" alt=""></div>
+<script>
+(function(){
+var reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+var bar=document.querySelector('.bar'),pg=document.querySelector('.progress i');
+function onScroll(){var h=document.documentElement,max=h.scrollHeight-innerHeight;pg.style.transform='scaleX('+(max>0?Math.min(1,scrollY/max):0)+')';bar.classList.toggle('on',scrollY>40);}
+addEventListener('scroll',onScroll,{passive:true});onScroll();
+var links=[].slice.call(document.querySelectorAll('.bar nav a'));
+if('IntersectionObserver' in window){
+  var so=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){links.forEach(function(a){a.removeAttribute('aria-current');if(a.getAttribute('href')==='#'+e.target.id){a.setAttribute('aria-current','true');a.scrollIntoView({inline:'center',block:'nearest'});}});}});},{rootMargin:'-30% 0px -60% 0px'});
+  document.querySelectorAll('.sec').forEach(function(s){so.observe(s);});
+}
+var cv=document.getElementById('grid'),ctx=cv.getContext('2d'),COLS=148,STR=[132,148,152,1e9];
+var CAP=['每隔 132 格出現一次，比一列少 16 格，所以每往下一列就往左偏 16 格。','每隔 148 格出現一次，剛好等於一列，橘格排成同一欄。','每隔 152 格出現一次，比一列多 4 格，所以每往下一列就往右偏 4 格。'];
+var cur=0,prev=3,sweep=1,cell,rows,W,H,dpr,timer=null,visible=true;
+function size(){var r=cv.parentNode.getBoundingClientRect();dpr=Math.min(devicePixelRatio||1,2);W=r.width;H=r.height;cell=Math.max(5,W/COLS);rows=Math.ceil(H/cell);cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);cv.style.width=W+'px';cv.style.height=H+'px';ctx.setTransform(dpr,0,0,dpr,0,0);draw();}
+function draw(){ctx.clearRect(0,0,W,H);var g=Math.max(1,cell*.16),b=sweep*rows,cols=Math.ceil(W/cell);
+ for(var r=0;r<rows;r++){var T=STR[r<b?cur:prev];
+  for(var c=0;c<cols;c++){var m=T>1e8?9:(r*COLS+c)%T;
+   ctx.fillStyle=m===0?'#b8651b':m===1?'#0f6b6b':m===2?'rgba(15,107,107,.42)':'#e1e8e5';
+   ctx.fillRect(c*cell+g/2,r*cell+g/2,cell-g,cell-g);}}}
+function go(n){prev=cur;cur=n;
+ document.querySelectorAll('.chips button').forEach(function(x,i){x.setAttribute('aria-checked',i===n?'true':'false');x.tabIndex=i===n?0:-1;});
+ document.getElementById('cap-main').textContent='示意：一列 148 格，'+CAP[n];
+ if(reduce){prev=n;sweep=1;draw();return;}
+ sweep=0;var t0=performance.now();(function step(t){sweep=Math.min(1,(t-t0)/900);draw();if(sweep<1)requestAnimationFrame(step);})(t0);}
+function stop(){if(timer){clearInterval(timer);timer=null;}}
+var cb=document.querySelectorAll('.chips button');
+cb.forEach(function(x,i){x.addEventListener('click',function(){stop();if(i!==cur)go(i);});
+ x.addEventListener('keydown',function(e){var k=e.key,n=i;if(k==='ArrowRight'||k==='ArrowDown')n=(i+1)%3;else if(k==='ArrowLeft'||k==='ArrowUp')n=(i+2)%3;else return;e.preventDefault();stop();go(n);cb[n].focus();});});
+size();addEventListener('resize',size);
+go(0);
+if(!reduce){timer=setInterval(function(){if(visible)go((cur+1)%3);},5200);}
+if('IntersectionObserver' in window){new IntersectionObserver(function(e){visible=e[0].isIntersecting;}).observe(cv.parentNode);}
+var g10=document.getElementById('g10'),sm=document.getElementById('sm');
+if(g10&&sm){for(var k=0;k<100;k++){var d=document.createElement('i');d.textContent=k+1;g10.appendChild(d);}
+ var cs=g10.children;
+ function upd(){var n=+sm.value,T=n*8,pos=[],ov=0;document.getElementById('smv').textContent=n;
+  for(var i=0;i<100;i++){var b=i%48===0,c=i%T===0;cs[i].className=(b?'base ':'')+(c?'cur':'');if(c){pos.push(i+1);if(b)ov++;}}
+  document.getElementById('play-out').textContent=n+' 個 SM × 8 = '+T+' 個執行緒。thread 0 的落點：第 '+pos.join('、')+' 格；其中和 6 個 SM 時相同的有 '+ov+'／'+pos.length+'。';}
+ sm.addEventListener('input',upd);upd();}
+var lb=document.getElementById('lightbox'),im=lb.querySelector('img');
+function close(){lb.classList.remove('is-open');im.src='';}
+document.querySelectorAll('figure.fig img').forEach(function(g){g.addEventListener('click',function(){im.src=g.currentSrc||g.src;im.alt=g.alt;lb.classList.add('is-open');});});
+lb.addEventListener('click',close);document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+})();
+</script>
+</body>
+</html>

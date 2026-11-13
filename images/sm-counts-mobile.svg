@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 541" width="520" height="541" role="img" font-family='"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif'><title>三組晶片的 SM 數與初始化執行緒數</title><desc>三條長度依執行緒數成比例的橫條：Hopper 270,336、Blackwell B200／B300 303,104、GB200／GB300 311,296，差距不大，但足以讓同一個種子填出的位置完全不同。</desc><rect width="520" height="541" fill="#f4f6f3"/><text x="20" y="40" font-size="26" text-anchor="start" fill="#12252b" font-weight="700">Hopper：H100 SXM、H200、H800</text>
+<text x="20" y="79" font-size="26" text-anchor="start" fill="#4b5e62" font-weight="400">132 個 SM → 270,336 個執行緒</text>
+<rect x="20" y="91.0" width="416.8421052631579" height="24" rx="4" fill="#8a8173" stroke="none" stroke-width="1"/>
+<text x="20" y="164" font-size="26" text-anchor="start" fill="#12252b" font-weight="700">Blackwell：B200、B300</text>
+<text x="20" y="203" font-size="26" text-anchor="start" fill="#4b5e62" font-weight="400">148 個 SM → 303,104 個執行緒</text>
+<rect x="20" y="215.0" width="467.36842105263156" height="24" rx="4" fill="#0f6b6b" stroke="none" stroke-width="1"/>
+<text x="20" y="288" font-size="26" text-anchor="start" fill="#12252b" font-weight="700">Blackwell：GB200、GB300</text>
+<text x="20" y="327" font-size="26" text-anchor="start" fill="#4b5e62" font-weight="400">152 個 SM → 311,296 個執行緒</text>
+<rect x="20" y="339.0" width="480.0" height="24" rx="4" fill="#0f6b6b" stroke="none" stroke-width="1"/>
+<text x="260" y="416" font-size="26" text-anchor="middle" fill="#12252b" font-weight="400">每個 SM 用滿 2,048 個執行緒，</text>
+<text x="260" y="455" font-size="26" text-anchor="middle" fill="#12252b" font-weight="400">SM 數不同，</text>
+<text x="260" y="494" font-size="26" text-anchor="middle" fill="#12252b" font-weight="400">同一個種子填出的位置就不同</text></svg>

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 902" width="520" height="902" role="img" font-family='"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif'><title>四家公司的模型時間軸</title><desc>依發布先後列出四家公司的模型，灰色為 Hopper、青綠色為 Blackwell、橘色為混合來源。</desc><rect width="520" height="902" fill="#f4f6f3"/><text x="20" y="54" font-size="28" text-anchor="start" fill="#12252b" font-weight="700">DeepSeek</text>
+<circle cx="34" cy="91" r="10" fill="#8a8173"/>
+<text x="56" y="100" font-size="26" text-anchor="start" fill="#12252b" font-weight="400">V3（2024 年 12 月）</text>
+<circle cx="34" cy="137" r="10" fill="#0f6b6b"/>
+<text x="56" y="146" font-size="26" text-anchor="start" fill="#12252b" font-weight="400">V4-Flash／Pro（2026 年 4 月）</text>
+<text x="20" y="200" font-size="28" text-anchor="start" fill="#12252b" font-weight="700">月之暗面</text>
+<circle cx="34" cy="237" r="10" fill="#8a8173"/>
+<text x="56" y="246" font-size="26" text-anchor="start" fill="#12252b" font-weight="400">K2（2025 年 7 月）</text>
+<circle cx="34" cy="283" r="10" fill="#8a8173"/>
+<text x="56" y="292" font-size="26" text-anchor="start" fill="#12252b" font-weight="400">K2.5（2026 年 1 月）</text>
+<circle cx="34" cy="329" r="10" fill="#b8651b"/>
+<text x="56" y="338" font-size="26" text-anchor="start" fill="#12252b" font-weight="400">K2.7-Code（2026 年 6 月）</text>
+<circle cx="34" cy="375" r="10" fill="#0f6b6b"/>
+<text x="56" y="384" font-size="26" text-anchor="start" fill="#12252b" font-weight="400">K3（2026 年 7 月）</text>
+<circle cx="34" cy="421" r="10" fill="#0f6b6b"/>
+<text x="56" y="430" font-size="26" text-anchor="start" fill="#12252b" font-weight="400">K3.1-Pro（2026 年 11 月）</text>
+<text x="20" y="484" font-size="28" text-anchor="start" fill="#12252b" font-weight="700">MiniMax</text>
+<circle cx="34" cy="521" r="10" fill="#8a8173"/>
+<text x="56" y="530" font-size="26" text-anchor="start" fill="#12252b" font-weight="400">M2.7（2026 年 4 月）</text>
+<circle cx="34" cy="567" r="10" fill="#0f6b6b"/>
+<text x="56" y="576" font-size="26" text-anchor="start" fill="#12252b" font-weight="400">M3（2026 年 6 月）</text>
+<text x="20" y="630" font-size="28" text-anchor="start" fill="#12252b" font-weight="700">螞蟻集團</text>
+<circle cx="34" cy="667" r="10" fill="#8a8173"/>
+<text x="56" y="676" font-size="26" text-anchor="start" fill="#12252b" font-weight="400">Ling-3.0-flash（2026 年 8 月）</text>
+<circle cx="34" cy="713" r="10" fill="#0f6b6b"/>
+<text x="56" y="722" font-size="26" text-anchor="start" fill="#12252b" font-weight="400">Ling-3.1-flash（2026 年 10 月）</text>
+<line x1="20" y1="738" x2="500" y2="738" stroke="#c9d1cc" stroke-width="1" stroke-linecap="butt"/>
+<circle cx="34" cy="781" r="10" fill="#8a8173"/>
+<text x="56" y="790" font-size="26" text-anchor="start" fill="#12252b" font-weight="400">Hopper（132 個 SM）</text>
+<circle cx="34" cy="825" r="10" fill="#0f6b6b"/>
+<text x="56" y="834" font-size="26" text-anchor="start" fill="#12252b" font-weight="400">Blackwell（148／152 個 SM）</text>
+<circle cx="34" cy="869" r="10" fill="#b8651b"/>
+<text x="56" y="878" font-size="26" text-anchor="start" fill="#12252b" font-weight="400">混合來源</text></svg>
